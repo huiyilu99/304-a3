@@ -1,0 +1,420 @@
+---
+title: "Hope is on Joe Biden, Pressure is on Donald Trump"
+author: 
+- "Ying Xiong(1004795885),Yixin Liang(1005549998),Huiyi Lu(1004754615),Deyu Meng(1004739991)" 
+-   
+- "Code and data supporting this analysis is available at: https://github.com/huiyilu99/304-a3" 
+date: "11/02/2020"
+output:
+  bookdown::pdf_document2
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(haven)
+library(knitr)
+
+# Loading in the cleaned survey Data
+survey_data <- read_csv("/Users/apple/Desktop/PS3/survey_data.csv")
+
+# Loading in the cleaned census Data
+census_data <- read_csv("/Users/apple/Desktop/PS3/census_data.csv")
+
+```
+
+
+```{r census_cleaning, include =FALSE}
+clean_census_data <- census_data %>% 
+  mutate(state=case_when(
+    statefip == "alabama" ~ "AL",
+    statefip == "alaska" ~ "AK",
+    statefip == "arizona" ~ "AZ",
+    statefip == "arkansas" ~ "AR",
+    statefip == "california" ~ "CA",
+    statefip == "colorado" ~ "CO",
+    statefip == "connecticut" ~ "CT",
+    statefip == "delaware" ~ "DE", 
+    statefip == "district of columbia" ~ "DC",
+    statefip == "florida" ~ "FL",
+    statefip == "georgia" ~ "GA",
+    statefip == "hawaii" ~ "HI",
+    statefip == "idaho" ~ "ID",
+    statefip == "illinois" ~ "IL",
+    statefip == "indiana" ~ "IN",
+    statefip == "iowa" ~ "IA",
+    statefip == "kansas" ~ "KS",
+    statefip == "kentucky" ~ "KY",
+    statefip == "louisiana" ~ "LA",
+    statefip == "maine" ~ "ME",
+    statefip == "maryland" ~ "MD",
+    statefip == "massachusetts" ~ "MA",
+    statefip == "michigan" ~ "MI",
+    statefip == "minnesota" ~ "MN",
+    statefip == "mississippi" ~ "MS",
+    statefip == "missouri" ~ "MO",
+    statefip == "montana" ~ "MT",
+    statefip == "nebraska" ~ "NE",
+    statefip == "nevada" ~ "NV",
+    statefip == "new hampshire" ~ "NH",
+    statefip == "new jersey" ~ "NJ",
+    statefip == "new mexico" ~ "NM",
+    statefip == "new york" ~ "NY",
+    statefip == "north carolina" ~ "NC",
+    statefip == "north dakota" ~ "ND",
+    statefip == "ohio" ~ "OH",
+    statefip == "oklahoma" ~ "OK",
+    statefip == "oregon" ~ "OR",
+    statefip == "pennsylvania" ~ "PA",
+    statefip == "rhode island" ~ "RI",
+    statefip == "south carolina" ~ "SC",
+    statefip == "south dakota" ~ "SD",
+    statefip == "tennessee" ~ "TN",
+    statefip == "texas" ~ "TX",
+    statefip == "utah" ~ "UT",
+    statefip == "vermont" ~ "VT",
+    statefip == "virginia" ~ "VA",
+    statefip == "washington" ~ "WA",
+    statefip == "west virginia" ~ "WV",
+    statefip == "wisconsin" ~ "WI",
+    statefip == "wyoming" ~ "WY")) %>%    #rename all the categories from full state names to abbreviations
+  filter(age != "less than 1 year old") %>% #remove people who are 90+ in 1980 and 1990
+  filter(age != "90 (90+ in 1980 and 1990)") %>% #remove people who are less than 1 year old
+  mutate(age_factor=case_when(
+    age %in% c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17) ~ "NA",
+    age %in% c(18,19,20,21,22,23,24,25) ~ "age_18_25",
+    age %in% c(26,27,28,29,30,31,32,33,34,35) ~ "age_26_35",
+    age %in% c(36,37,38,39,40,41,42,43,44,45) ~ "age_36_45",
+    age %in% c(46,47,48,49,50,51,52,53,54,55) ~ "age_46_55",
+    age %in% c(56,57,58,59,60,61,62,63,64,65) ~ "age_56_65",
+    age %in% c(66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,
+               81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97) ~ "age_66_97"
+  )) %>% # categorize the numerical ages into 6 groups and "NA"
+  mutate(race_factor=case_when(
+    race == "white" ~ "white",
+    race == "black/african american/negro" ~ "black",
+    race == "chinese" ~ "chinese",
+    race == "japanese" ~ "japanese",
+    race == "other asian or pacific islander" ~ "other asian or pacific islander",
+    race %in% c("two major races", "other race, nec", "three or more major races") ~ "other races",
+    race == "american indian or alaska native" ~ "american indian or alaska native"
+  )) %>% # reclassify into 6 race groups
+  filter(age_factor != "NA") %>% # remove people who are not eligible for votes
+  select(state, age_factor, race_factor, sex) %>%
+  count(age_factor, sex, state, race_factor) %>% 
+  group_by(state, age_factor, sex, race_factor)
+
+```
+
+
+```{r survey_cleaning, include =FALSE}
+clean_survey_data <- survey_data %>%
+  mutate(race_factor=case_when(
+    race_ethnicity == "White" ~ "white",
+    race_ethnicity == "Black, or African American" ~ "black",
+    race_ethnicity == "Asian (Chinese)" ~ "chinese",
+    race_ethnicity == "Asian (Japanese)" ~ "japanese",
+    race_ethnicity %in% c("Asian (Asian Indian)", "Asian (Vietnamese)", 
+                "Asian (Korean)", "Asian (Filipino)", "Asian (Other)",
+                "Pacific Islander (Native Hawaiian)","Pacific Islander (Other)",
+                "Pacific Islander (Samoan)","Pacific Islander (Guamanian)") ~ "other asian or pacific islander",
+    race_ethnicity == "Some other race" ~ "other races",
+    race_ethnicity == "American Indian or Alaska Native" ~ "american indian or alaska native"
+  )) %>%  # reclassify into 6 race groups
+  mutate(age_factor=case_when(
+    age %in% c(18,19,20,21,22,23,24,25) ~ "age_18_25",
+    age %in% c(26,27,28,29,30,31,32,33,34,35) ~ "age_26_35",
+    age %in% c(36,37,38,39,40,41,42,43,44,45) ~ "age_36_45",
+    age %in% c(46,47,48,49,50,51,52,53,54,55) ~ "age_46_55",
+    age %in% c(56,57,58,59,60,61,62,63,64,65) ~ "age_56_65",
+    age %in% c(66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,
+               81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97) ~ "age_66_97"
+  ))  %>% # categorize the numerical ages into 6 groups and
+  mutate(sex=case_when(
+    gender == "Female" ~ "female",
+    gender == "Male" ~ "male")) %>% #rename all the categories from capital letters to lowercases
+  select(state, age_factor, race_factor, sex, vote_trump, vote_biden)
+
+```
+
+
+\newpage
+
+
+# Model
+
+We aim to predict the popular vote outcome and electoral vote outcome of the 2020 American federal election^[https://www.cnn.com/politics/live-news/us-election-news-11-02-2020/index.html  More details about the election are included here.]. We apply a post-stratification technique with a logistic model generated in R. In the subsections, we will describe the data cleaning process, model specifics, and the post-stratification method.
+
+## Data Cleaning
+To correspond our survey data variables to the census data variables for modeling and predictions, we recategorize the data within several variables, race, age, state, and sex in both data sets.
+
+- race
+
+Initially, in the census data, the variable has the following 9 categories: <`r unique(census_data$race)`>. In the survey data, the variable contains the following 15 categories: <`r unique(survey_data$race_ethnicity)`>. To match the categories, we reclassify the observations into 6 categories. Similar categories are retained while the others are recorded as *other races*. 
+
+<`r unique(clean_survey_data$race_factor)`>. 
+
+- age
+
+Initially, in both data, the age variable is expressed numerically. We classify them into 6 groups that would contain all the eligible ages. Specifically, we identify the young (18^[https://www.usa.gov/voter-registration-age-requirements Notably, different states have different voter registration age standards. We use 18 as the unified minimum age to be eligible to vote here for simplicity.] - 25^[It is common knowledge that most people will finish their education at age around 25 when they finish graduate studies.]) and the retired group (66^[https://www.nasi.org/learn/socialsecurity/retirement-age 66 is the retirement age in the U.S.] to 97^[The maximum age in both survey data and census data. Referring to **Table 3(Maximum Age in Survey data & Census data)** in Appendix 4.1), the remaining ages are grouped with a 10-year difference. 
+
+<`r unique(clean_survey_data$age_factor)`>. 
+
+- state
+
+The categories (51 states) in the survey data exactly match those of the census data. Notably, the survey data uses the abbreviations for each state while the census data uses the full name. We rename each category with the abbreviations in the census data for simplicity. 
+
+<`r unique(clean_survey_data$state)`>. 
+
+- sex 
+
+The categories (2 genders) in the survey data exactly match those of the census data. There are some spelling differences, such as the capitalization of the first letter in the survey data. We apply no capitalized letters for categories.
+
+<`r unique(clean_survey_data$sex)`>. 
+
+
+## Model Specifics
+
+```{r trump, include=FALSE}
+model_t <- glm(vote_trump ~ state + age_factor + race_factor + sex, data = clean_survey_data, family= "binomial")
+summary(model_t)
+
+```
+
+```{r biden, include=FALSE}
+model_b <- glm(vote_biden ~ state + age_factor + race_factor + sex, data = clean_survey_data, family= "binomial")
+summary(model_b)
+
+```
+
+We are interested in predicting the popular vote and electoral vote results of the 2020 American federal election. To predict the outcome, we employ the post-stratification technique on the census data. Before predictions, we estimate the probability of each post-stratification cell voting for Trump with our model. The model is created through the survey data collected from the Voter Study Group.
+
+We employ a logistic regression model to calculate the probabilities, which is specific for binary response modeling. We apply a frequentist method because people's minds would change from year to year, and there is no such precise prior information to use for the Bayesian inference.
+
+
+The following mathematical notation is the logistic regression model we create in R with four predictors, *race_factor*, *age_factor*, *state*, and *sex*.
+
+$$
+\log\frac{p_i}{1-p_i} = {\beta}_{0} + {\beta}_{state}X_{state} + {\beta}_{race}X_{race} + 
+{\beta}_{age}X_{age} + {\beta}_{sex}X_{sex}
+$$
+
+
+$p_i$: the probability of the respondent voting for Trump in the 2020 American federal election
+
+${\beta}_{0}$: the intercept value; represents the log odds of an 18-25 ages old female being in Alaska and is identified as American Indian or Alaska Native. These information in each variable would be the reference groups in the following discussion.
+
+${\beta}_{state}$: the slope values for states; represent the difference of preference between people in Alaska and the other 50 states
+
+$X_{state}$: = 1 if the respondent is in states except for Alaska 
+
+${\beta}_{race}$: the slope values for race groups; represent the difference of preference between people of American Indian or Alaska Native and the other 6 race groups
+
+$X_{racefactor}$: = 1 if the respondent is identified as races other than American Indian or Alaska Native
+
+${\beta}_{age}$: the slope values for age groups; represent the difference of preference between people aged 18-25 and the other 5 age groups
+
+$X_{agefactor}$: = 1 if the respondent's age is in range other than 18 - 25
+
+${\beta}_{sex}$: the slope values for states; represent the difference of preference between females and males
+
+$X_{sex}$:  = 1 if the respondent is identified as a male
+
+Given the above variable information, we can effectively predict a person's probability of a citizen voting for Trump. The variables separate the information into different categories that allow each post-stratification cell to be classified precisely and give back a relatively correct probability.
+
+We employ 4 predictors in our final prediction model, *race_factor*, *age_factor*, *state*, and *sex*. To avoid potential errors that may mislead the probability, we choose to use the existing variables that are matchable. This is the model with the smallest AIC^[Akaike's information criterion. A method used to select models. The smaller, the better.] we create. Since most of the betas for the variable state have large p-values, we try another model that excludes the state variable. Referring to **Table 5 (AIC comparison for Trump's Models)** in Appendix 4.4, it turns out that the AIC of the model would be reduced if we include the variable. The other three variables all have statistically significant p-values, and we retain them as predictors.
+
+
+## Post-Stratification 
+
+The post-stratification method partitions the census data into demographic cells according to the chosen variables. Typically, the number of cells should equal all possible combinations of the variables unless no observations satisfy the cells' characteristics.  
+
+To estimate the candidates' voting rate, state, age, race, and sex are used to create cells to implement the post-stratification analysis. The census data set is separated into 4241 different demographic cells. The response variable, proportion of voters, is estimated within each demographic cell. The population-level estimate is then calculated by weighting each cell based on its relative proportion in the population. Post-stratification is useful because it helps to reduce the bias resulting from non-probability based sampling. 
+
+```{r electoral vote, include=FALSE}
+# Here I will perform the post-stratification calculation
+clean_census_data$estimate_t <-
+  model_t %>%
+  predict(newdata = clean_census_data, type = "response")   # yhat
+
+clean_census_data$estimate_b <-
+  model_b %>%
+  predict(newdata = clean_census_data, type = "response")   # yhat
+
+
+census_prediction <- clean_census_data %>%
+  mutate(trump_predict_prop = estimate_t*n, biden_predict_prop = estimate_b*n) %>%
+  summarise(trump_predict = sum(trump_predict_prop)/sum(n), 
+            biden_predict = sum(biden_predict_prop)/sum(n))
+
+census_prediction
+
+
+trump_percentage <- (3+9+6+11+9+29+16+4+11+6+8+10+6+3+3+5+6+7+20+9+3+11+38+6+5)/538
+biden_percentage <- (55+7+3+3+4+6+20+8+11+10+4+16+10+15+4+14+5+29+18+7+4+3+13+12+10+3)/538
+trump_percentage
+biden_percentage
+
+```
+
+```{r popular vote, include=FALSE}
+clean_census_data1 <- clean_census_data%>%
+  mutate(trump_predict_prop = estimate_t*n, biden_predict_prop = estimate_b*n)
+
+
+t <- sum(clean_census_data1$trump_predict_prop)/sum(clean_census_data1$n)
+b <- sum(clean_census_data1$biden_predict_prop)/sum(clean_census_data1$n)
+t
+b
+
+```
+
+In the United States, fifty-one individual states may have unique cultures, characteristics, or even local laws. These differences lead to the variation in voter approval, which is worthy of being analyzed. Different age groups may have various attitudes toward the candidates, and the policies candidates commit to implementing after becoming the president. The gender gap is always a significant issue because men tend to vote for republicans, while women tend to vote for democrats (Thompson, 2020). Also, the candidates' behavior, personality, and communication style may trigger gender bias. The candidate's policy proposals may dramatically raise support from a specific race. Also, candidates' attitudes toward immigration and ethnicity may affect the support rate (Cohn, 2020).
+
+## Eligibility for Votes
+When cleaning the data, juveniles and children are removed from the data set because 18-years-old is the required age to gain the legal voting right (USAGov, 2020). Though a few states may have a different age restriction, 18-years-old is assumed to be the required age to simplify our analysis. Also, observations above 90 years old in 1980 and 1990 are removed because they are less likely to attend the in-person voting due to personal or health conditions. They would be around 120 years old now if not passed away, which is less likely.
+
+
+## Electoral Vote
+This study focuses on analyzing both the electoral vote and popular vote. According to the special presidential election procedure, most states comply with a winner-takes-all system (National Archives, 2019). The candidate who wins a plurality of votes wins the state's total allocated electoral votes. The electoral rate measures the possibility that the candidate would win the election after considering the winner-takes-all system. However, the popular rate only measures the probability that the presidential candidate has higher total votes in the U.S. Therefore, this study calculates both electoral rate and popular rate to make comparisons. This is essential because some candidates win the popular vote but lose in the electoral vote, which leads to the final failure in the presidential election. 
+
+For the electoral vote analysis, it is notable that states Maine and Nebraska do not use a winner-takes-all method. They give two votes to the statewide winner and one vote to each Congressional district winner. Due to the absence of Congressional districts' data in two states, this study assumes these two states also follow the winner-takes-all method. 
+
+# Results
+
+```{r, echo=FALSE}
+popular_comparison <- cbind(Trump = t, Biden = b)
+knitr::kable(popular_comparison, caption = "Predicted Popular Vote for Trump v.s. Biden", digits = 4, format = "markdown")
+
+
+```
+
+- Referring to **Table 1(Predicted Popular Vote for Trump vs. Biden)** in Appendix 4.6, we estimate that Trump will likely receive 39.5% of the total number of votes, and Biden will likely receive 41.5% of the total number of votes. 
+
+```{r, echo=FALSE}
+electoral_comparison <- cbind(Trump = trump_percentage, Biden = biden_percentage)
+knitr::kable(electoral_comparison, caption = "Predicted Electoral Vote for Trump v.s. Biden", digits = 4, format = "markdown")
+
+```
+
+- Referring to **Table 2(Predicted Electoral Vote for Trump vs. Biden)** in Appendix 4.5, we estimate that the proportion of electoral votes that Trump will be likely to receive is 45.4%. In comparison, the proportion of electoral votes that Biden will be likely to receive is 54.6%. 
+
+This is based on our post-stratification analysis modeled by logistic regression, which accounts for the state, age, race, and sex. The same process is done in both the Trump and Biden models to predict the election winner. Referring to Appendix 4.3(**Table 4(Model for Trump)**) and 4.4(**Table 5(Model for Biden)**), most categories under state have large p-values in both the Trump and Biden models, which means the state is statistically insignificant. However, we still believe that states can influence the outcome as the U.S has blue (Democratic) states and red (Republican) states. Age is significant in the Trump model but insignificant in the Biden model. We include age in both models since Millennials are more Democratic-leaning. 54% of Millennials identify with the Democratic Party or lean Democratic, while 38% identify with or lean to the GOP (Pew Research Center, 2020). Overall, according to our prediction of the popular vote and electoral vote, we believe that Biden has a higher chance of winning.
+
+# Discussion
+## Summary
+We collect the individual-level survey data from the Democracy Fund and 2018 5-year American Community Surveys from IPUMS. The individual-level survey data consists of some personal information and the interviewees' intention to vote, while the 2018 5-year American Community Surveys only consist of some personal information. 
+
+We clean and create four variables(age, state, race, sex) in both data sets to assure the categories under each categorical variable are consistent. Logistic regression is used on individual-level survey data to assess the impact of each explanatory variable we chose. 
+
+We apply a post-stratification method to partition the census data into demographic cells according to the selected variables. Thus the census data is split into 4241 different demographic cells. We estimate the proportion of voters in each state and follow the "winner-takes-all" principle to calculate the electoral vote. Then we weigh each proportion estimate by the respective population size of that state and sum those values and divide that by the entire population size into the census data to calculate the popular vote. 
+
+The results are that Biden may gain 54.6% of the electoral vote and 41.5% of the popular vote, and Trump may acquire 45.4% of the electoral vote and 39.5% of the popular vote. Our model might be biased since we only include four variables and split the data into 4241 cells — generally, the more cells, the better. Computation errors might occur during the record of the survey. Interviewees might answer the survey or the census without thinking thoroughly. 
+
+## Conclusion
+Based on the statistical analysis conducted in this report, it is estimated that 41.5% of the overall popular vote and 54.6% of the Electoral College vote are in favor of Biden. Simultaneously, for Trump, the statistics are 39.5% and 45.4%, respectively, referring to **Table 1 (Predicted Popular Vote for Trump v.s. Biden)** and **Table 2 (Predicted Electoral Vote for Trump v.s. Biden)**. The results of the two vote-counting approaches are consistent — Biden is taking the lead. We can conclude that Joe Biden is predicted to have a higher probability of winning the 2020 U.S. presidential election at the current moment using our data. 
+
+The line of reasoning behind including the results from two vote-counting approaches is that most states comply with the "winner-takes-all" procedure for the Electoral College vote. (National Archives, 2019) There are occasions when the two results may not be in line with one another. For instance, on historical precedent, the candidate would still lose the election even though the overall popular vote was in favor of him/her, which was the case for Hillary Clinton, who outcompeted Trump for about 3 million popular votes but lost the previous U.S. presidential election in 2016. (Robertson, Kirk, & Hulley-Jones, 2020) Estimating the results of both the overall popular vote and the Electoral College vote would enhance the completeness of our analysis.
+
+Besides predicting the winner, the results mentioned above certainly are influential to the two candidates in various aspects. Further inferences and predictions could be made from the results. To elaborate, amid the COVID-19 pandemic, the candidates should quickly adapt to the current situation. It is reported that Biden exceeded Trump in terms of fundraising because Biden and his team had fully utilized the online platform early on, which proved to be cost-effective. (Wilkie, 2020) In our case, for the party being at a disadvantage — Trump and his team would probably reflect upon the results and make revisions to his campaign to gain more votes based on the results. 
+
+## Weaknesses
+
+Throughout our report, we have made the assumptions of the eligible voting age being 18, and all states following the "winner-takes-all" procedure for the Electoral College vote for simplicity. However, in reality, the age restrictions for voting in different states vary. (USAGov, 2020) Moreover, two states — Maine and Nebraska, have their own rules for processing the Electoral College vote. (National Archives, 2019) Unfortunately, we did not consider all the variations when conducting the analysis, which may constrain our prediction results.
+
+## Next Steps
+
+To enhance our logistic model's prediction accuracy, we can gather more information and find more common variables between the two data sets to include more predictors for further analysis. Alternatively, the multilevel regression model could be another suitable method to analyze our data due to group-level data such as states. Applying other models may generate smaller AIC. We can also evaluate using other measurements such as Bayesian Information Criterion (BIC) and Residual Sum of Squares (RSS) for model selection. 
+
+Furthermore, we can compare our model results with the actual outcomes to see what causes the difference. Then, we can conduct another statistical analysis with more comprehensive information to validate our methodology. This would lay the basis for a more accurate future election prediction.
+
+
+\newpage
+
+# Appendix
+## Distribution of Age
+```{r, echo=FALSE}
+age_survey <- survey_data %>% summarise(survey_max = max(age))
+
+age_census <- census_data %>% 
+  filter(age != "less than 1 year old") %>% 
+  filter(age != "90 (90+ in 1980 and 1990)") %>% 
+  summarise(census_max = max(age))
+
+age_max <- cbind(Surveydata = age_survey, Censusdata = age_census)
+
+knitr::kable(age_max, caption = "Maximum Age in Survey data & Census data", digits = 1, format = "markdown")
+
+```
+
+
+## Model for Trump
+```{r, echo=FALSE}
+knitr::kable(summary(model_t)$coefficients, caption="Summary of Logit Regression for Trump", digits=3, format = "markdown")
+
+```
+
+
+## Model for Biden
+```{r, echo=FALSE}
+knitr::kable(summary(model_b)$coefficients, caption="Summary of Logit Regression for Biden", digits=3, format = "markdown")
+
+```
+
+## Model for Trump (exclude *state*)
+```{r, echo=FALSE}
+model_t_nostate <- glm(vote_trump ~ age_factor + race_factor + sex, data = clean_survey_data, family= "binomial")
+
+knitr::kable(summary(model_t_nostate)$coefficients, caption="Summary of Logit Regression for Trump without variable state", digits=3, format = "markdown")
+
+```
+
+
+```{r, echo=FALSE}
+comparison <- cbind(With_state = model_t$aic, Without_state = model_t_nostate$aic)
+
+knitr::kable(comparison, caption = "AIC comparison for Trump's Models", digits = 1, format = "markdown")
+
+```
+
+
+\newpage
+
+# References
+
+1. Britannica. (2016, November 7). United States Electoral College Votes by State. Encyclopædia Britannica. https://www.britannica.com/topic/United-States-Electoral-College-Votes-by-State-1787124.  
+
+2. Cohn, N. (2020, October 28). The Election's Big Twist: The Racial Gap Is Shrinking. The New York Times. https://www.nytimes.com/2020/10/28/upshot/election-polling-racial-gap.html.
+
+3. Hadley Wickham and Evan Miller (2020). haven: Import and Export 'SPSS', 'Stata' and 'SAS' Files. R package version 2.3.1. https://CRAN.R-project.org/package=haven
+
+4. IPUMS USA, University of Minnesota, www.ipums.org.
+
+5. Macaya, M., & Hayes, M. (2020, November 2). US election 2020: Latest news on Biden, Trump and voting. https://www.cnn.com/politics/live-news/us-election-news-11-02-2020/index.html. 
+
+6. NASI. What is the Social Security Retirement Age? National Academy of Social Insurance. https://www.nasi.org/learn/socialsecurity/retirement-age.  
+
+7. National Archives. (2019, December 23). What is the Electoral College? National Archives and Records Administration. https://www.archives.gov/electoral-college/about.   
+
+8. Pew Research Center.(2020, August). Changing U.S. Electorate, Race and Education Remain Stark Dividing Lines. 28).https://www.pewresearch.org/politics/2020/06/02/in-changing-u-s-electorate-race-and-education-remain-stark-dividing-lines/.  
+
+9. Robertson, H., Kirk, A., & Hulley-Jones, F. (2020, October 30). Electoral college explained: How Biden faces an uphill battle in the US election. https://www.theguardian.com/us-news/ng-interactive/2020/oct/30/electoral-college-explained-how-biden-faces-an-uphill-battle-in-the-us-election.
+
+10. Steven Ruggles, Sarah Flood, Ronald Goeken, Josiah Grover, Erin Meyer, Jose Pacas and Matthew Sobek. IPUMS USA: Version 10.0 [dataset]. Minneapolis, MN: IPUMS, 2020. https://doi.org/10.18128/D010.V10.0
+
+11. Tausanovitch, Chris and Lynn Vavreck. 2020. Democracy Fund + UCLA Nationscape, October 10-17, 2019 (version 20200814). https://www.voterstudygroup.org/downloads?key=8b7d3ae0-ae6b-4bbe-ab55-738726c9b607.
+
+12. Thompson, D. (2020, February 9). Why Men Vote for Republicans, and Women Vote for Democrats. https://www.theatlantic.com/ideas/archive/2020/02/how-women-became-democratic-partisans/606274/.
+
+13. USAGov. (2020, August 12). Voter Registration Age Requirements: USAGov. https://www.usa.gov/voter-registration-age-requirements.   
+
+14. Wickham et al., (2019). Welcome to the tidyverse. Journal of Open Source Software, 4(43), 1686, https://doi.org/10.21105/joss.01686 
+
+15. Wilkie, C. (2020, September 29). Coronavirus changed the 2020 money race - and helped Biden erase Trump's massive cash advantage. https://www.cnbc.com/2020/09/29/election-money-coronavirus-impact-biden-trump.html.
+
+16. Yihui Xie (2020). knitr: A General-Purpose Package for Dynamic Report Generation in R. R package version 1.30.
+
+17. Yihui Xie (2015) Dynamic Documents with R and knitr. 2nd edition. Chapman and Hall/CRC. ISBN 978-1498716963
+
+18. Yihui Xie (2014) knitr: A Comprehensive Tool for Reproducible Research in R. In Victoria Stodden, Friedrich Leisch and Roger D. Peng, editors, Implementing Reproducible Computational Research. Chapman and Hall/CRC. ISBN 978-1466561595
+
+
